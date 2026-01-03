@@ -1,6 +1,9 @@
 import * as Data from './data.js';
 import * as Utils from './utils.js';
 
+/**
+ * [최종 개선] 문자 분석 - 날짜 무시, 분석 결과 수정 가능 필드 제공
+ */
 export function parseSmsText() {
     const inputEl = document.getElementById('sms-input');
     const input = inputEl ? inputEl.value : "";
@@ -17,23 +20,28 @@ export function parseSmsText() {
 
     const lines = input.split('\n').filter(line => {
         const l = line.trim();
-        return l.length > 5 && !/^\d+\.\d+$/.test(l) && !l.includes("Web발신");
+        return l.length > 5 && !l.includes("Web발신");
     });
 
-    let foundCount = 0;
     const sortedCenters = [...Data.MEM_CENTERS].sort((a, b) => b.length - a.length);
 
     lines.forEach((line, lineIdx) => {
-        let originalText = line.trim();
-        let cleaned = originalText.replace(/\d+층\s*->\s*\d+층/g, " ");
-        cleaned = cleaned.replace(/\[?\d+호\]?|\d+\s*호/g, " ");
+        let cleaned = line.trim();
+        
+        // 1. [날짜 패턴 완벽 제거] 상/하차지로 오인될 수 있는 "1월 1일", "12-25" 등 제거
+        cleaned = cleaned.replace(/\d{1,2}월\s*\d{1,2}일/g, " "); // X월 X일 제거
+        cleaned = cleaned.replace(/\d{1,2}[\/\-\.]\d{1,2}/g, " "); // 12/25, 12-25, 12.25 제거
+        cleaned = cleaned.replace(/배차표|운송장/g, " "); // "배차표" 같은 단어 제거
+        
+        // 기타 노이즈 제거
+        cleaned = cleaned.replace(/\d+층\s*->\s*\d+층/g, " ");
         cleaned = cleaned.replace(/\d{1,2}:\d{2}/g, " ");
         cleaned = cleaned.replace(/[1-9][0-9]?T/g, " ");
-        cleaned = cleaned.replace(/\d+층/g, " ");
 
         let matches = [];
         let searchQueue = cleaned.toUpperCase();
 
+        // 등록지 매칭
         sortedCenters.forEach(center => {
             const centerUpper = center.toUpperCase();
             let pos = searchQueue.indexOf(centerUpper);
@@ -45,83 +53,84 @@ export function parseSmsText() {
 
         matches.sort((a, b) => a.index - b.index);
 
-        let finalFrom = "";
-        let finalTo = "";
+        let finalFrom = matches[0] ? matches[0].name : "";
+        let finalTo = matches[1] ? matches[1].name : "";
 
-        if (matches.length >= 2) {
-            finalFrom = matches[0].name;
-            finalTo = matches[1].name;
-        } else {
+        // 매칭 실패 시 단어 기준 추출 (날짜가 이미 제거된 상태라 안전함)
+        if (!finalFrom || !finalTo) {
             const words = cleaned.split(/\s+/).filter(w => w.trim().length >= 2);
-            if (words.length >= 2) {
-                finalFrom = words[0];
-                finalTo = words[1];
-            } else return;
+            if (!finalFrom) finalFrom = words[0] || "";
+            if (!finalTo) finalTo = words[1] || "";
         }
 
-        // --- 주소 정보 확인 및 입력 필드 구성 ---
-        const locations = [finalFrom, finalTo];
-        let quickAddHtml = "";
-        
-        locations.forEach((loc, i) => {
-            const locInfo = Data.MEM_LOCATIONS[loc];
-            // 주소 정보가 없는 경우에만 입력 필드 노출
-            if (!locInfo || !locInfo.address) {
-                quickAddHtml += `
-                <div class="quick-loc-input-group" style="margin-top:8px; padding-top:8px; border-top:1px dashed #eee;">
-                    <div style="font-size:0.8em; color:#666; margin-bottom:4px;">📍 <b>${loc}</b> 정보 추가</div>
-                    <input type="text" id="sms-addr-${lineIdx}-${i}" placeholder="주소 입력" style="width:100%; font-size:0.85em; padding:5px; margin-bottom:4px; border:1px solid #ddd; border-radius:3px;">
-                    <input type="text" id="sms-memo-${lineIdx}-${i}" placeholder="메모(담당자 등)" style="width:100%; font-size:0.85em; padding:5px; border:1px solid #ddd; border-radius:3px;">
-                </div>`;
-            }
-        });
+        if(!finalFrom && !finalTo) return;
 
+        // --- UI 구성 ---
         const itemDiv = document.createElement('div');
         itemDiv.className = "sms-item-card";
-        itemDiv.style = "background:white; padding:12px; border-radius:6px; margin-bottom:10px; border:1px solid #eee; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display:flex; flex-direction:column; gap:5px;";
-        
-        itemDiv.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div style="font-size:0.95em; color:#333;">
-                    <span style="font-weight:bold; color:#007bff;">${finalFrom}</span>
-                    <span style="margin:0 5px; color:#999;">→</span>
-                    <span style="font-weight:bold; color:#dc3545;">${finalTo}</span>
+        itemDiv.style = "background:white; padding:12px; border-radius:6px; margin-bottom:12px; border:2px solid #fab005; box-shadow: 0 4px 6px rgba(0,0,0,0.1);";
+
+        // 상차지/하차지 정보를 수정 가능한 Input으로 생성
+        const buildLocInput = (label, id, value, color) => {
+            const locInfo = Data.MEM_LOCATIONS[value];
+            const needsInfo = !locInfo || !locInfo.address; // 주소 정보가 없는가?
+            
+            return `
+                <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
+                    <span style="font-size:0.75em; color:#666; font-weight:bold;">${label}</span>
+                    <input type="text" id="${id}-name" value="${value}" 
+                        style="border:1px solid ${color}; border-radius:4px; padding:6px; font-weight:bold; color:${color}; font-size:0.95em;">
+                    ${needsInfo ? `
+                        <input type="text" id="${id}-addr" placeholder="주소 정보 없음(입력)" 
+                            style="border:1px solid #ddd; border-radius:4px; padding:4px; font-size:0.8em; background:#fff9db;">
+                        <input type="text" id="${id}-memo" placeholder="메모(담당자 등)" 
+                            style="border:1px solid #ddd; border-radius:4px; padding:4px; font-size:0.8em;">
+                    ` : `<div style="font-size:0.75em; color:#28a745;">✓ 주소 등록됨</div>`}
                 </div>
-                <button type="button" 
-                    onclick="window.registerParsedTripWithInfo(this, ${lineIdx}, '${finalFrom.replace(/'/g, "\\'")}', '${finalTo.replace(/'/g, "\\'")}')" 
-                    style="background:#28a745; color:white; border:none; padding:8px 12px; border-radius:4px; font-size:0.85em; cursor:pointer; font-weight:bold; width:auto;">
-                    저장 및 등록
-                </button>
+            `;
+        };
+
+        itemDiv.innerHTML = `
+            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                ${buildLocInput('상차지', `from-${lineIdx}`, finalFrom, '#007bff')}
+                <div style="align-self:center; font-weight:bold; color:#ccc;">▶</div>
+                ${buildLocInput('하차지', `to-${lineIdx}`, finalTo, '#dc3545')}
             </div>
-            ${quickAddHtml}
+            <button type="button" 
+                onclick="window.registerParsedTripWithInfo(this, ${lineIdx})" 
+                style="background:#28a745; color:white; border:none; padding:10px; border-radius:4px; font-size:0.9em; cursor:pointer; font-weight:bold; width:100%;">
+                확인 및 기록 저장
+            </button>
         `;
         resultsDiv.appendChild(itemDiv);
-        foundCount++;
     });
-
-    if(foundCount === 0) resultsDiv.innerHTML = "<p style='text-align:center; color:#666; font-size:0.9em;'>분석된 구간이 없습니다.</p>";
 }
 
 /**
- * 주소 정보와 함께 등록하는 함수
+ * 수정된 입력값들을 읽어서 위치 정보를 저장하고 운행 기록을 등록
  */
-export function registerParsedTripWithInfo(btn, lineIdx, from, to) {
-    // 1. 주소 및 메모 정보 업데이트 (입력된 경우)
-    const locations = [from, to];
-    locations.forEach((loc, i) => {
-        const addrIn = document.getElementById(`sms-addr-${lineIdx}-${i}`);
-        const memoIn = document.getElementById(`sms-memo-${lineIdx}-${i}`);
-        
-        const address = addrIn ? addrIn.value.trim() : null;
-        const memo = memoIn ? memoIn.value.trim() : null;
+export function registerParsedTripWithInfo(btn, lineIdx) {
+    // 1. 입력된 값 읽기
+    const fromName = document.getElementById(`from-${lineIdx}-name`).value.trim();
+    const toName = document.getElementById(`to-${lineIdx}-name`).value.trim();
+    
+    const fromAddr = document.getElementById(`from-${lineIdx}-addr`)?.value.trim();
+    const fromMemo = document.getElementById(`from-${lineIdx}-memo`)?.value.trim();
+    
+    const toAddr = document.getElementById(`to-${lineIdx}-addr`)?.value.trim();
+    const toMemo = document.getElementById(`to-${lineIdx}-memo`)?.value.trim();
 
-        if (address || memo) {
-            Data.updateLocationData(loc, address, memo);
-        }
-    });
+    if (!fromName || !toName) {
+        alert("상/하차지 이름을 입력해주세요.");
+        return;
+    }
 
-    // 2. 운행 기록 등록
-    const key = `${from}-${to}`;
+    // 2. 위치 정보 업데이트 (주소/메모가 입력된 경우에만)
+    if (fromAddr || fromMemo) Data.updateLocationData(fromName, fromAddr, fromMemo);
+    if (toAddr || toMemo) Data.updateLocationData(toName, toAddr, toMemo);
+
+    // 3. 운행 기록 등록 (기존 운임/거리 정보 활용)
+    const key = `${fromName}-${toName}`;
     const savedIncome = Data.MEM_FARES[key] || 0;
     const savedDistance = Data.MEM_DISTANCES[key] || 0;
 
@@ -130,21 +139,24 @@ export function registerParsedTripWithInfo(btn, lineIdx, from, to) {
         date: Utils.getTodayString(),
         time: Utils.getCurrentTimeString(), 
         type: "화물운송",
-        from: from, to: to, distance: savedDistance, income: savedIncome,
+        from: fromName, 
+        to: toName, 
+        distance: savedDistance, 
+        income: savedIncome,
         cost: 0, liters: 0, unitPrice: 0, brand: "", expenseItem: "", supplyItem: "", mileage: 0
     });
     
-    // UI 상태 업데이트
+    // 4. UI 처리
     btn.disabled = true;
-    btn.textContent = "완료";
+    btn.textContent = "등록 완료";
     btn.style.background = "#bdc3c7";
     const card = btn.closest('.sms-item-card');
-    card.style.background = "#f0fdf4";
-    // 입력 필드들 숨기기
-    card.querySelectorAll('.quick-loc-input-group').forEach(el => el.style.display = 'none');
+    card.style.background = "#f8f9fa";
+    card.style.opacity = "0.7";
+    card.style.border = "1px solid #ddd";
 
-    Utils.showToast("위치 정보 및 운행 기록 저장됨");
+    Utils.showToast(`${fromName} → ${toName} 저장됨`);
     
-    // 메인 화면 갱신 (리프레쉬 없이 데이터 반영)
+    // 화면 갱신
     if (window.updateAllDisplays) window.updateAllDisplays();
 }
