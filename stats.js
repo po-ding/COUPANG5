@@ -279,54 +279,152 @@ export function renderMileageSummary(period = 'monthly') {
     if(document.getElementById('mileage-summary-cards')) document.getElementById('mileage-summary-cards').innerHTML = h;
 }
 
-/** [중요] generatePrintView 함수: 상세 내역에서 운행거리 출력 로직 수정 */
+/** 
+ * [이미지 참조 정밀 수정본] generatePrintView 
+ * 요약 섹션 구분선, 내용 컬럼, 일자별 굵은선 반영
+ */
 export function generatePrintView(year, month, period, isDetailed) {
     const sDay = period === 'second' ? 16 : 1, eDay = period === 'first' ? 15 : 31;
+    const periodStr = period === 'full' ? '1일 ~ 말일' : `${sDay}일 ~ ${eDay===15?15:'말일'}일`;
+
     const target = MEM_RECORDS.filter(r => { 
         const statDate = getStatisticalDate(r.date, r.time), d = new Date(statDate); 
         return statDate.startsWith(`${year}-${month}`) && d.getDate() >= sDay && d.getDate() <= eDay && r.type !== '운행종료'; 
     }).sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time));
     
     const transportList = target.filter(r => ['화물운송', '대기', '운행취소'].includes(r.type));
-    const fuelList = target.filter(r => r.type === '주유소'), expenseList = target.filter(r => ['지출', '소모품'].includes(r.type)), incomeList = target.filter(r => r.type === '수입');
+    const fuelList = target.filter(r => r.type === '주유소');
+    const expenseList = target.filter(r => ['지출', '소모품'].includes(r.type));
+    const incomeList = target.filter(r => r.type === '수입');
 
     let transInc = 0, transExp = 0, transDist = 0;
     transportList.forEach(r => { transInc += safeInt(r.income); transExp += safeInt(r.cost); transDist += safeFloat(r.distance); });
+    
     let fuelTotalCost = 0, fuelTotalSubsidy = 0;
     fuelList.forEach(r => { fuelTotalCost += safeInt(r.cost); fuelTotalSubsidy += safeInt(r.subsidy); });
+    
     let genExp = 0; expenseList.forEach(r => genExp += safeInt(r.cost));
     let genInc = 0; incomeList.forEach(r => genInc += safeInt(r.income));
 
-    const totalRevenue = transInc + genInc, totalSpend = transExp + genExp + (fuelTotalCost - fuelTotalSubsidy); 
+    const totalRevenue = transInc + genInc;
+    const totalSpend = transExp + genExp;
+    const fuelNetCost = fuelTotalCost - fuelTotalSubsidy;
+    const finalProfit = totalRevenue - totalSpend - fuelNetCost;
 
     const w = window.open('','_blank');
-    let h = `<html><head><title>운송내역서</title><style>body { font-family: sans-serif; margin: 20px; } table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 20px; } th, td { border: 1px solid #ccc; padding: 6px; text-align: center; } th { background: #eee; } .summary { border: 1px solid #ddd; padding: 15px; background: #f9f9f9; } .txt-red { color: red; } .txt-blue { color: blue; } .txt-green { color: green; font-weight: bold; }</style></head><body>
-        <h2>${year}년 ${month}월 운송 기록</h2>
-        <div class="summary"><p>근무일: ${new Set(transportList.map(r => getStatisticalDate(r.date, r.time))).size}일 | 거리: ${transDist.toFixed(1)}km</p><p class="txt-blue">총 수입: ${totalRevenue.toLocaleString()}원</p><p class="txt-red">총 지출: ${totalSpend.toLocaleString()}원</p><p class="txt-green">최종 순수익: ${(totalRevenue - totalSpend).toLocaleString()}원</p></div>
-        <h3>1. 운송 상세 내역</h3>
+    let h = `
+    <html>
+    <head>
+        <title>운송기록_${year}${month}</title>
+        <style>
+            body { font-family: -apple-system, sans-serif; margin: 30px; line-height: 1.6; color: #333; }
+            h2 { font-size: 24px; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 30px; table-layout: fixed; border-top: 1px solid #333; }
+            th, td { border: 1px solid #ddd; padding: 7px; text-align: center; }
+            th { background: #f8f9fa; font-weight: bold; }
+            .summary { padding: 10px 0; margin-bottom: 30px; }
+            .summary p { margin: 8px 0; font-weight: bold; font-size: 14px; }
+            .dashed-line { border-top: 1px dashed #ccc; margin: 15px 0; }
+            .thick-line { border-top: 2px solid #333; margin: 15px 0; }
+            .txt-blue { color: #007bff; }
+            .txt-red { color: #dc3545; }
+            .txt-green { color: #28a745; font-size: 1.5em; margin-top: 15px !important; }
+            .date-border { border-top: 2.5px solid #000 !important; }
+            h3 { border-bottom: 1px solid #333; padding-bottom: 5px; margin-top: 40px; font-size: 18px; }
+            .left { text-align: left; padding-left: 10px; }
+        </style>
+    </head>
+    <body>
+        <h2>${year}년 ${month}월 ${periodStr} 운송 기록 (04시 기준)</h2>
+        
+        <div class="summary">
+            <p>[요약] 근무일: ${new Set(transportList.map(r => getStatisticalDate(r.date, r.time))).size}일 | 운행건수: ${transportList.length}건 | 운행거리: ${transDist.toFixed(1)}km</p>
+            <div class="dashed-line"></div>
+            <p class="txt-blue">[ + ] 총 수입: ${totalRevenue.toLocaleString()} 원 (운송: ${transInc.toLocaleString()} + 기타: ${genInc.toLocaleString()})</p>
+            <p class="txt-red">[ - ] 총 지출: ${totalSpend.toLocaleString()} 원 (운송지출: ${transExp.toLocaleString()} + 일반지출: ${genExp.toLocaleString()})</p>
+            <p class="txt-red">[ - ] 실 주유비: ${fuelNetCost.toLocaleString()} 원 (주유금액: ${fuelTotalCost.toLocaleString()} - 보조금: ${fuelTotalSubsidy.toLocaleString()})</p>
+            <div class="thick-line"></div>
+            <p class="txt-green">[ = ] 최종 순수익: ${finalProfit.toLocaleString()} 원</p>
+        </div>
+
+        <h3>1. 운송 내역</h3>
         <table>
             <thead>
                 <tr>
-                    <th>날짜</th>
-                    <th>상차지</th>
-                    <th>하차지</th>
-                    <th>상태</th>
-                    ${isDetailed ? '<th>거리(km)</th><th>금액(원)</th>' : ''}
+                    <th style="width:10%;">날짜</th>
+                    <th style="width:28%;">상차지</th>
+                    <th style="width:28%;">하차지</th>
+                    <th style="width:17%;">내용</th>
+                    <th style="width:17%;">거리</th>
                 </tr>
             </thead>
             <tbody>`;
             
-    transportList.forEach(r => { 
-        h += `<tr>
-                <td>${getStatisticalDate(r.date, r.time).substring(5)}</td>
-                <td>${r.from||''}</td>
-                <td>${r.to||''}</td>
-                <td>${r.type === '운행취소' ? '취소' : (r.type === '대기' ? '대기' : '운행')}</td>
-                ${isDetailed ? `<td>${safeFloat(r.distance).toFixed(1)} km</td><td>${safeInt(r.income).toLocaleString()}</td>` : ''}
-              </tr>`; 
+    let lastDate = "";
+    transportList.forEach(r => {
+        const currentDate = getStatisticalDate(r.date, r.time);
+        const borderClass = (lastDate !== "" && lastDate !== currentDate) ? 'class="date-border"' : '';
+        lastDate = currentDate;
+
+        let distDisplay = "-";
+        if(r.distance > 0) distDisplay = r.distance.toFixed(0);
+
+        h += `<tr ${borderClass}>
+                <td>${currentDate.substring(5)}</td>
+                <td class="left">${r.from||''}</td>
+                <td class="left">${r.to||''}</td>
+                <td>${r.type === '운행취소' ? '취소' : (r.type === '대기' ? '대기' : '화물운송')}</td>
+                <td>${distDisplay}</td>
+              </tr>`;
     });
     
-    h += `</tbody></table><button onclick="window.print()">인쇄</button></body></html>`;
+    h += `</tbody></table>`;
+
+    h += `<h3>2. 주유 및 정비 내역</h3>`;
+    if(fuelList.length > 0) {
+        h += `<table><thead><tr><th>날짜</th><th>주유리터</th><th>주유단가</th><th>주유금액</th><th>보조금액</th><th>실결제금액</th></tr></thead><tbody>`;
+        fuelList.forEach(f => {
+            const cost = safeInt(f.cost), sub = safeInt(f.subsidy);
+            h += `<tr>
+                <td>${getStatisticalDate(f.date, f.time).substring(5)}</td>
+                <td>${safeFloat(f.liters).toFixed(2)} L</td>
+                <td>${safeInt(f.unitPrice).toLocaleString()} 원</td>
+                <td>${cost.toLocaleString()} 원</td>
+                <td class="txt-red">-${sub.toLocaleString()} 원</td>
+                <td><strong>${(cost - sub).toLocaleString()} 원</strong></td>
+            </tr>`;
+        });
+        h += `</tbody></table>`;
+    } else { h += `<p style="font-size:12px; color:#666;">내역 없음</p>`; }
+
+    h += `<h3>3. 지출 내역</h3>`;
+    if(expenseList.length > 0) {
+        h += `<table><thead><tr><th style="width:15%;">날짜</th><th style="width:55%;">내용 (적요)</th><th style="width:30%;">지출금액</th></tr></thead><tbody>`;
+        expenseList.forEach(e => {
+            h += `<tr>
+                <td>${getStatisticalDate(e.date, e.time).substring(5)}</td>
+                <td class="left">${e.expenseItem || e.supplyItem || e.type}</td>
+                <td>${safeInt(e.cost).toLocaleString()} 원</td>
+            </tr>`;
+        });
+        h += `</tbody></table>`;
+    } else { h += `<p style="font-size:12px; color:#666;">내역 없음</p>`; }
+
+    h += `<h3>4. 수입 내역</h3>`;
+    if(incomeList.length > 0) {
+        h += `<table><thead><tr><th style="width:15%;">날짜</th><th style="width:55%;">내용 (적요)</th><th style="width:30%;">수입금액</th></tr></thead><tbody>`;
+        incomeList.forEach(i => {
+            h += `<tr>
+                <td>${getStatisticalDate(i.date, i.time).substring(5)}</td>
+                <td class="left">${i.expenseItem || i.type}</td>
+                <td>${safeInt(i.income).toLocaleString()} 원</td>
+            </tr>`;
+        });
+        h += `</tbody></table>`;
+    } else { h += `<p style="font-size:12px; color:#666;">내역 없음</p>`; }
+
+    h += `<div style="text-align:center; margin-top:50px;"><button onclick="window.print()" style="padding:10px 40px; font-size:16px; cursor:pointer; font-weight:bold;">인쇄하기</button></div>
+    </body></html>`;
     w.document.write(h); w.document.close();
 }
 
