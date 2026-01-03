@@ -280,8 +280,8 @@ export function renderMileageSummary(period = 'monthly') {
 }
 
 /** 
- * [요청 사항 반영] generatePrintView 
- * 주유 및 정비 내역 하단 합계 행 추가 
+ * [최종 수정] generatePrintView 
+ * 요약 섹션에 하루 운행 평균 거리, 평균 주유비용, 평균 주유리터 추가
  */
 export function generatePrintView(year, month, period, isDetailed) {
     const sDay = period === 'second' ? 16 : 1, eDay = period === 'first' ? 15 : 31;
@@ -300,8 +300,12 @@ export function generatePrintView(year, month, period, isDetailed) {
     let transInc = 0, transExp = 0, transDist = 0;
     transportList.forEach(r => { transInc += safeInt(r.income); transExp += safeInt(r.cost); transDist += safeFloat(r.distance); });
     
-    let fuelTotalCost = 0, fuelTotalSubsidy = 0;
-    fuelList.forEach(r => { fuelTotalCost += safeInt(r.cost); fuelTotalSubsidy += safeInt(r.subsidy); });
+    let fuelTotalCost = 0, fuelTotalSubsidy = 0, fuelTotalLiters = 0;
+    fuelList.forEach(r => { 
+        fuelTotalCost += safeInt(r.cost); 
+        fuelTotalSubsidy += safeInt(r.subsidy); 
+        fuelTotalLiters += safeFloat(r.liters);
+    });
     
     let genExp = 0; expenseList.forEach(r => genExp += safeInt(r.cost));
     let genInc = 0; incomeList.forEach(r => genInc += safeInt(r.income));
@@ -310,6 +314,14 @@ export function generatePrintView(year, month, period, isDetailed) {
     const totalSpend = transExp + genExp;
     const fuelNetCost = fuelTotalCost - fuelTotalSubsidy;
     const finalProfit = totalRevenue - totalSpend - fuelNetCost;
+
+    // 근무일 계산
+    const workDays = new Set(transportList.map(r => getStatisticalDate(r.date, r.time))).size;
+
+    // 하루 평균 데이터 계산 (0으로 나누기 방지)
+    const avgDist = workDays > 0 ? (transDist / workDays).toFixed(1) : 0;
+    const avgFuelCost = workDays > 0 ? Math.round(fuelTotalCost / workDays) : 0;
+    const avgFuelLiters = workDays > 0 ? (fuelTotalLiters / workDays).toFixed(2) : 0;
 
     const w = window.open('','_blank');
     let h = `
@@ -339,7 +351,8 @@ export function generatePrintView(year, month, period, isDetailed) {
         <h2>${year}년 ${month}월 ${periodStr} 운송 기록 (04시 기준)</h2>
         
         <div class="summary">
-            <p>[요약] 근무일: ${new Set(transportList.map(r => getStatisticalDate(r.date, r.time))).size}일 | 운행건수: ${transportList.length}건 | 운행거리: ${transDist.toFixed(1)}km</p>
+            <p>[요약] 근무일: ${workDays}일 | 운행건수: ${transportList.length}건 | 운행거리: ${transDist.toFixed(1)}km</p>
+            <p>[일평균] 운행: ${avgDist}km | 주유비용: ${avgFuelCost.toLocaleString()}원 | 주유리터: ${avgFuelLiters}L</p>
             <div class="dashed-line"></div>
             <p class="txt-blue">[ + ] 총 수입: ${totalRevenue.toLocaleString()} 원 (운송: ${transInc.toLocaleString()} + 기타: ${genInc.toLocaleString()})</p>
             <p class="txt-red">[ - ] 총 지출: ${totalSpend.toLocaleString()} 원 (운송지출: ${transExp.toLocaleString()} + 일반지출: ${genExp.toLocaleString()})</p>
