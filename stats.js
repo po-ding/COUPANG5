@@ -279,6 +279,7 @@ export function renderMileageSummary(period = 'monthly') {
     if(document.getElementById('mileage-summary-cards')) document.getElementById('mileage-summary-cards').innerHTML = h;
 }
 
+/** [중요] generatePrintView 함수: 상세 내역에서 운행거리 출력 로직 수정 */
 export function generatePrintView(year, month, period, isDetailed) {
     const sDay = period === 'second' ? 16 : 1, eDay = period === 'first' ? 15 : 31;
     const target = MEM_RECORDS.filter(r => { 
@@ -302,8 +303,29 @@ export function generatePrintView(year, month, period, isDetailed) {
     let h = `<html><head><title>운송내역서</title><style>body { font-family: sans-serif; margin: 20px; } table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 20px; } th, td { border: 1px solid #ccc; padding: 6px; text-align: center; } th { background: #eee; } .summary { border: 1px solid #ddd; padding: 15px; background: #f9f9f9; } .txt-red { color: red; } .txt-blue { color: blue; } .txt-green { color: green; font-weight: bold; }</style></head><body>
         <h2>${year}년 ${month}월 운송 기록</h2>
         <div class="summary"><p>근무일: ${new Set(transportList.map(r => getStatisticalDate(r.date, r.time))).size}일 | 거리: ${transDist.toFixed(1)}km</p><p class="txt-blue">총 수입: ${totalRevenue.toLocaleString()}원</p><p class="txt-red">총 지출: ${totalSpend.toLocaleString()}원</p><p class="txt-green">최종 순수익: ${(totalRevenue - totalSpend).toLocaleString()}원</p></div>
-        <h3>운송 내역</h3><table><thead><tr><th>날짜</th><th>상차지</th><th>하차지</th>${isDetailed ? '<th>거리</th><th>수입</th>' : ''}</tr></thead><tbody>`;
-    transportList.forEach(r => { h += `<tr><td>${getStatisticalDate(r.date, r.time).substring(5)}</td><td>${r.from||''}</td><td>${r.to||''}</td>${isDetailed ? `<td>${safeFloat(r.distance)}</td><td>${safeInt(r.income).toLocaleString()}</td>` : ''}</tr>`; });
+        <h3>1. 운송 상세 내역</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>날짜</th>
+                    <th>상차지</th>
+                    <th>하차지</th>
+                    <th>상태</th>
+                    ${isDetailed ? '<th>거리(km)</th><th>금액(원)</th>' : ''}
+                </tr>
+            </thead>
+            <tbody>`;
+            
+    transportList.forEach(r => { 
+        h += `<tr>
+                <td>${getStatisticalDate(r.date, r.time).substring(5)}</td>
+                <td>${r.from||''}</td>
+                <td>${r.to||''}</td>
+                <td>${r.type === '운행취소' ? '취소' : (r.type === '대기' ? '대기' : '운행')}</td>
+                ${isDetailed ? `<td>${safeFloat(r.distance).toFixed(1)} km</td><td>${safeInt(r.income).toLocaleString()}</td>` : ''}
+              </tr>`; 
+    });
+    
     h += `</tbody></table><button onclick="window.print()">인쇄</button></body></html>`;
     w.document.write(h); w.document.close();
 }
