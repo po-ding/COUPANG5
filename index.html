@@ -21,42 +21,31 @@
 
         <div id="main-page">
             <form id="record-form" onsubmit="return false;">
-<fieldset class="toggle-fieldset">
-    <legend class="section-toggle-label" data-target="datetime-body">기록 일시 <span class="toggle-icon">▼</span></legend>
-    <div id="datetime-body" class="section-toggle-body hidden">
-        <div class="input-group row">
-            <input type="date" id="date" required>
-            <input type="time" id="time" required>
-        </div>
-    </div>
-</fieldset>
+                <!-- 1. 기록 일시 (아코디언) -->
+                <fieldset id="datetime-info-fieldset" class="toggle-fieldset">
+                    <legend class="section-toggle-label">기록 일시 <span class="toggle-icon">▼</span></legend>
+                    <div class="section-toggle-body hidden">
+                        <div class="input-group row">
+                            <input type="date" id="date" required>
+                            <input type="time" id="time" required>
+                        </div>
+                    </div>
+                </fieldset>
 
-<!-- 2. 기록 종류 -->
-<fieldset class="toggle-fieldset">
-    <legend class="section-toggle-label" data-target="type-body">기록 종류 <span class="toggle-icon">▼</span></legend>
-    <div id="type-body" class="section-toggle-body hidden">
-        <select id="type">
-            <option value="화물운송">화물운송</option>
-            <option value="수입">수입</option>
-            <option value="주유소">주유소</option>
-            <option value="소모품">소모품</option>
-            <option value="지출">지출</option>
-        </select>
-    </div>
-</fieldset>
+                <!-- 2. 기록 종류 (아코디언) -->
+                <fieldset id="type-info-fieldset" class="toggle-fieldset">
+                    <legend class="section-toggle-label">기록 종류 <span class="toggle-icon">▼</span></legend>
+                    <div class="section-toggle-body hidden">
+                        <select id="type">
+                            <option value="화물운송">화물운송</option>
+                            <option value="수입">수입</option>
+                            <option value="주유소">주유소</option>
+                            <option value="소모품">소모품</option>
+                            <option value="지출">지출</option>
+                        </select>
+                    </div>
+                </fieldset>
 
-<!-- 3. 금액 정보 -->
-<fieldset class="toggle-fieldset">
-    <legend class="section-toggle-label" data-target="cost-body">금액 정보 <span class="toggle-icon">▼</span></legend>
-    <div id="cost-body" class="section-toggle-body hidden">
-        <div id="cost-wrapper" class="hidden">
-            <input type="number" id="cost" step="0.01" placeholder="지출 금액 (만원)">
-        </div>
-        <div id="income-wrapper">
-            <input type="number" id="income" step="0.01" placeholder="수입 금액 (만원)">
-        </div>
-    </div>
-</fieldset>
                 <!-- 배차 문자 분석 섹션 -->
                 <fieldset id="sms-parser-section" style="background-color: #fff9db; border: 1px solid #fab005;">
                     <legend>배차 문자 자동 등록</legend>
