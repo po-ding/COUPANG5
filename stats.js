@@ -280,8 +280,8 @@ export function renderMileageSummary(period = 'monthly') {
 }
 
 /** 
- * [이미지 참조 정밀 수정본] generatePrintView 
- * 요약 섹션 구분선, 내용 컬럼, 일자별 굵은선 반영
+ * [요청 사항 반영] generatePrintView 
+ * 주유 및 정비 내역 하단 합계 행 추가 
  */
 export function generatePrintView(year, month, period, isDetailed) {
     const sDay = period === 'second' ? 16 : 1, eDay = period === 'first' ? 15 : 31;
@@ -332,6 +332,7 @@ export function generatePrintView(year, month, period, isDetailed) {
             .date-border { border-top: 2.5px solid #000 !important; }
             h3 { border-bottom: 1px solid #333; padding-bottom: 5px; margin-top: 40px; font-size: 18px; }
             .left { text-align: left; padding-left: 10px; }
+            .total-row { background: #f2f2f2; font-weight: bold; }
         </style>
     </head>
     <body>
@@ -383,17 +384,41 @@ export function generatePrintView(year, month, period, isDetailed) {
     h += `<h3>2. 주유 및 정비 내역</h3>`;
     if(fuelList.length > 0) {
         h += `<table><thead><tr><th>날짜</th><th>주유리터</th><th>주유단가</th><th>주유금액</th><th>보조금액</th><th>실결제금액</th></tr></thead><tbody>`;
+        
+        let sumLiters = 0;
+        let sumCost = 0;
+        let sumSub = 0;
+
         fuelList.forEach(f => {
-            const cost = safeInt(f.cost), sub = safeInt(f.subsidy);
+            const liters = safeFloat(f.liters);
+            const cost = safeInt(f.cost);
+            const sub = safeInt(f.subsidy);
+            
+            sumLiters += liters;
+            sumCost += cost;
+            sumSub += sub;
+
             h += `<tr>
                 <td>${getStatisticalDate(f.date, f.time).substring(5)}</td>
-                <td>${safeFloat(f.liters).toFixed(2)} L</td>
+                <td>${liters.toFixed(2)} L</td>
                 <td>${safeInt(f.unitPrice).toLocaleString()} 원</td>
                 <td>${cost.toLocaleString()} 원</td>
                 <td class="txt-red">-${sub.toLocaleString()} 원</td>
                 <td><strong>${(cost - sub).toLocaleString()} 원</strong></td>
             </tr>`;
         });
+
+        const avgPrice = sumLiters > 0 ? Math.round(sumCost / sumLiters) : 0;
+
+        h += `<tr class="total-row">
+            <td>합계(${fuelList.length}회)</td>
+            <td>${sumLiters.toFixed(2)} L</td>
+            <td>${avgPrice.toLocaleString()} 원</td>
+            <td>${sumCost.toLocaleString()} 원</td>
+            <td class="txt-red">-${sumSub.toLocaleString()} 원</td>
+            <td>${(sumCost - sumSub).toLocaleString()} 원</td>
+        </tr>`;
+
         h += `</tbody></table>`;
     } else { h += `<p style="font-size:12px; color:#666;">내역 없음</p>`; }
 
