@@ -8,6 +8,27 @@ import { parseSmsText } from './sms_parser.js';
 
 export function setupEventListeners(updateAllDisplays) {
     const getEl = (id) => document.getElementById(id);
+    // === [여기부터 추가] 아코디언 토글 로직 ===
+    document.querySelectorAll('.section-toggle-label').forEach(label => {
+        label.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const targetBody = document.getElementById(targetId);
+            
+            if (targetBody) {
+                const isHidden = targetBody.classList.contains('hidden');
+                // 다른 섹션들을 다 닫고 싶다면 아래 주석을 해제하세요
+                // document.querySelectorAll('.section-toggle-body').forEach(b => b.classList.add('hidden'));
+                
+                if (isHidden) {
+                    targetBody.classList.remove('hidden');
+                    this.classList.add('active');
+                } else {
+                    targetBody.classList.add('hidden');
+                    this.classList.remove('active');
+                }
+            }
+        });
+    });
 
     getEl('btn-parse-sms')?.addEventListener('click', parseSmsText);
 

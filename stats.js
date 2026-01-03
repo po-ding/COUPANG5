@@ -30,7 +30,56 @@ export function calculateTotalDuration(records) {
     const minutes = Math.round(totalMinutes % 60);
     return `${hours}h ${minutes}m`;
 }
+export function createSummaryHTML(title, records) {
+    const validRecords = records.filter(r => r.type !== '운행취소' && r.type !== '운행종료');
+    let totalIncome = 0, totalExpense = 0, totalDistance = 0, totalTripCount = 0;
+    let totalFuelCost = 0, totalFuelLiters = 0;
+    
+    validRecords.forEach(r => {
+        totalIncome += safeInt(r.income);
+        totalExpense += safeInt(r.cost);
+        if (r.type === '주유소') { 
+            totalFuelCost += safeInt(r.cost); 
+            totalFuelLiters += safeFloat(r.liters); 
+        }
+        if (['화물운송'].includes(r.type)) { 
+            totalDistance += safeFloat(r.distance); 
+            totalTripCount++; 
+        }
+    });
 
+    const netIncome = totalIncome - totalExpense;
+    
+    const metrics = [
+        { label: '수입', value: formatToManwon(totalIncome), unit: ' 만원', className: 'income' },
+        { label: '지출', value: formatToManwon(totalExpense), unit: ' 만원', className: 'cost' },
+        { label: '정산', value: formatToManwon(netIncome), unit: ' 만원', className: 'net' },
+        { label: '운행거리', value: totalDistance.toFixed(1), unit: ' km' },
+        { label: '운행건수', value: totalTripCount, unit: ' 건' },
+        { label: '주유금액', value: formatToManwon(totalFuelCost), unit: ' 만원', className: 'cost' },
+        { label: '주유리터', value: totalFuelLiters.toFixed(2), unit: ' L' },
+    ];
+
+    // [중요] .summary-value에 style="display:none;"을 넣어 처음에 숨김
+    let itemsHtml = metrics.map(m => `
+        <div class="summary-item">
+            <span class="summary-label">${m.label}</span>
+            <span class="summary-value ${m.className || ''}" style="display:none;">${m.value}${m.unit}</span>
+        </div>
+    `).join('');
+
+    // [중요] return 부분: 카드 전체(.summary-card-container)를 클릭하면 내부 값을 토글함
+    return `
+        <div class="summary-card-container" onclick="this.querySelectorAll('.summary-value').forEach(v => v.style.display = (v.style.display==='none'?'inline':'none'))">
+            <div style="text-align:center; font-weight:bold; color:#007bff; margin-bottom:10px;">
+                ${title} <span style="font-size:0.8em; color:#999;">(클릭하여 보기/숨기기)</span>
+            </div>
+            <div class="summary-toggle-grid">
+                ${itemsHtml}
+            </div>
+        </div>
+    `;
+}
 export function createSummaryHTML(title, records) {
     const validRecords = records.filter(r => r.type !== '운행취소' && r.type !== '운행종료');
     let totalIncome = 0, totalExpense = 0, totalDistance = 0, totalTripCount = 0;
