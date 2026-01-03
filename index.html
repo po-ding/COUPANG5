@@ -23,8 +23,8 @@
             <form id="record-form" onsubmit="return false;">
                 <!-- 1. 기록 일시 (아코디언) -->
                 <fieldset class="toggle-fieldset">
-                    <legend class="section-toggle-label" data-target="datetime-info-body">기록 일시 <span class="toggle-icon">▼</span></legend>
-                    <div id="datetime-info-body" class="section-toggle-body hidden">
+                    <legend class="section-toggle-label" data-target="datetime-body">기록 일시 <span class="toggle-icon">▼</span></legend>
+                    <div id="datetime-body" class="section-toggle-body hidden">
                         <div class="input-group row">
                             <input type="date" id="date" required>
                             <input type="time" id="time" required>
@@ -34,8 +34,8 @@
 
                 <!-- 2. 기록 종류 (아코디언) -->
                 <fieldset class="toggle-fieldset">
-                    <legend class="section-toggle-label" data-target="type-info-body">기록 종류 <span class="toggle-icon">▼</span></legend>
-                    <div id="type-info-body" class="section-toggle-body hidden">
+                    <legend class="section-toggle-label" data-target="type-body">기록 종류 <span class="toggle-icon">▼</span></legend>
+                    <div id="type-body" class="section-toggle-body hidden">
                         <select id="type">
                             <option value="화물운송">화물운송</option>
                             <option value="수입">수입</option>
@@ -101,8 +101,8 @@
 
                 <!-- 3. 금액 정보 (아코디언) -->
                 <fieldset class="toggle-fieldset">
-                    <legend class="section-toggle-label" data-target="cost-info-body">금액 정보 <span class="toggle-icon">▼</span></legend>
-                    <div id="cost-info-body" class="section-toggle-body hidden">
+                    <legend class="section-toggle-label" data-target="cost-body">금액 정보 <span class="toggle-icon">▼</span></legend>
+                    <div id="cost-body" class="section-toggle-body hidden">
                         <div id="cost-wrapper" class="hidden">
                             <input type="number" id="cost" step="0.01" placeholder="지출 금액 (만원)">
                         </div>
@@ -196,6 +196,7 @@
         </div>
 
         <div id="settings-page" class="hidden">
+            <!-- 설정 페이지 생략하지 않고 모두 포함 -->
             <h2>전체 데이터 요약</h2>
             <div class="summary-grid">
                 <div class="metric-card"><span class="metric-label">총 운행일수</span><span class="metric-value" id="cumulative-operating-days">-</span></div>
