@@ -1,3 +1,4 @@
+/** ui.js */
 import { getTodayString, getCurrentTimeString } from './utils.js';
 import { MEM_LOCATIONS, MEM_CENTERS, MEM_RECORDS, MEM_FARES, MEM_DISTANCES, MEM_COSTS, MEM_EXPENSE_ITEMS } from './data.js';
 
@@ -60,6 +61,9 @@ export function editRecord(id) {
     document.getElementById('date').disabled = true; 
     document.getElementById('time').disabled = true;
     
+    // 수정 시 아코디언은 닫혀있어도 되지만, 입력을 위해 열어주고 싶다면 아래 주석 해제
+    // document.querySelectorAll('.section-toggle-body').forEach(b => b.classList.remove('hidden'));
+
     toggleUI(); 
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -115,10 +119,14 @@ export function resetForm() {
     document.getElementById('time').value = getCurrentTimeString();
     document.getElementById('date').disabled = false;
     document.getElementById('time').disabled = false;
+
+    // [추가] 아코디언 폼 리셋 (모두 닫기)
+    document.querySelectorAll('.section-toggle-body').forEach(b => b.classList.add('hidden'));
+    document.querySelectorAll('.section-toggle-label').forEach(l => l.classList.remove('active'));
+
     toggleUI();
 }
 
-/** [추가] 자주 가는 지역 버튼 생성 (기존 main.js에서 이동) */
 export function renderFrequentLocationButtons() {
     const fromContainer = document.getElementById('top-from-centers');
     const toContainer = document.getElementById('top-to-centers');

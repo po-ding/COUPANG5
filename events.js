@@ -9,24 +9,28 @@ import { parseSmsText } from './sms_parser.js';
 export function setupEventListeners(updateAllDisplays) {
     const getEl = (id) => document.getElementById(id);
 
+    // [신규] 아코디언 토글 클릭 이벤트
+    document.querySelectorAll('.section-toggle-label').forEach(label => {
+        label.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const targetBody = document.getElementById(targetId);
+            if (targetBody) {
+                const isHidden = targetBody.classList.contains('hidden');
+                if (isHidden) {
+                    targetBody.classList.remove('hidden');
+                    this.classList.add('active');
+                } else {
+                    targetBody.classList.add('hidden');
+                    this.classList.remove('active');
+                }
+            }
+        });
+    });
+
     getEl('btn-parse-sms')?.addEventListener('click', parseSmsText);
 
     getEl('center-search-input')?.addEventListener('input', (e) => {
         UI.displayCenterList(e.target.value);
-    });
-
-    const toggleSections = ['datetime', 'type'];
-    toggleSections.forEach(section => {
-        const legend = getEl(`legend-${section}`);
-        const body = getEl(`body-${section}`);
-        if(legend && body) {
-            legend.addEventListener('click', () => {
-                if(window.innerWidth <= 768) {
-                    legend.classList.toggle('active');
-                    body.classList.toggle('active');
-                }
-            });
-        }
     });
 
     getEl('address-display')?.addEventListener('click', (e) => {
@@ -75,7 +79,6 @@ export function setupEventListeners(updateAllDisplays) {
     getEl('from-center')?.addEventListener('input', handleLocationInput);
     getEl('to-center')?.addEventListener('input', handleLocationInput);
 
-    // 기록 동작
     getEl('btn-register-trip')?.addEventListener('click', () => {
         const formData = UI.getFormDataWithoutTime();
         if (formData.type === '화물운송' && formData.distance <= 0) { alert('운행거리를 입력해주세요.'); return; }
@@ -120,7 +123,6 @@ export function setupEventListeners(updateAllDisplays) {
         if(formData.type === '주유소') Stats.displaySubsidyRecords();
     });
 
-    // 수정 동작
     getEl('btn-update-record')?.addEventListener('click', () => {
         const id = parseInt(getEl('edit-id').value);
         const index = Data.MEM_RECORDS.findIndex(r => r.id === id);
@@ -171,7 +173,6 @@ export function setupEventListeners(updateAllDisplays) {
         updateAllDisplays();
     });
 
-    // 날짜 및 화면 전환
     getEl('refresh-btn')?.addEventListener('click', () => { UI.resetForm(); location.reload(); });
     getEl('today-date-picker')?.addEventListener('change', () => updateAllDisplays());
     getEl('prev-day-btn')?.addEventListener('click', () => DateCtrl.moveDate(-1, updateAllDisplays));
@@ -195,21 +196,18 @@ export function setupEventListeners(updateAllDisplays) {
 
     getEl('go-to-settings-btn')?.addEventListener('click', () => { 
         const mainP = getEl('main-page'), setP = getEl('settings-page');
-        if(mainP && setP && !window.location.pathname.includes('settings.html')) {
+        if(mainP && setP) {
             mainP.classList.add("hidden"); setP.classList.remove("hidden"); 
             getEl('go-to-settings-btn').classList.add("hidden"); 
             getEl('back-to-main-btn').classList.remove("hidden"); 
             Stats.displayCumulativeData(); Stats.displayCurrentMonthData(); Stats.displaySubsidyRecords();
-        } else { location.href = 'settings.html'; }
+        }
     });
 
     getEl('back-to-main-btn')?.addEventListener('click', () => { 
-        if(window.location.pathname.includes('settings.html')) { location.href = 'index.html'; } 
-        else {
-            getEl('main-page')?.classList.remove("hidden"); getEl('settings-page')?.classList.add("hidden"); 
-            getEl('go-to-settings-btn')?.classList.remove("hidden"); getEl('back-to-main-btn')?.classList.add("hidden"); 
-            updateAllDisplays(); 
-        }
+        getEl('main-page')?.classList.remove("hidden"); getEl('settings-page')?.classList.add("hidden"); 
+        getEl('go-to-settings-btn')?.classList.remove("hidden"); getEl('back-to-main-btn')?.classList.add("hidden"); 
+        updateAllDisplays(); 
     });
 
     document.querySelectorAll('.collapsible-header').forEach(header => { 

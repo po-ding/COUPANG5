@@ -22,9 +22,9 @@
         <div id="main-page">
             <form id="record-form" onsubmit="return false;">
                 <!-- 1. 기록 일시 (아코디언) -->
-                <fieldset id="datetime-info-fieldset" class="toggle-fieldset">
-                    <legend class="section-toggle-label">기록 일시 <span class="toggle-icon">▼</span></legend>
-                    <div class="section-toggle-body hidden">
+                <fieldset class="toggle-fieldset">
+                    <legend class="section-toggle-label" data-target="datetime-info-body">기록 일시 <span class="toggle-icon">▼</span></legend>
+                    <div id="datetime-info-body" class="section-toggle-body hidden">
                         <div class="input-group row">
                             <input type="date" id="date" required>
                             <input type="time" id="time" required>
@@ -33,9 +33,9 @@
                 </fieldset>
 
                 <!-- 2. 기록 종류 (아코디언) -->
-                <fieldset id="type-info-fieldset" class="toggle-fieldset">
-                    <legend class="section-toggle-label">기록 종류 <span class="toggle-icon">▼</span></legend>
-                    <div class="section-toggle-body hidden">
+                <fieldset class="toggle-fieldset">
+                    <legend class="section-toggle-label" data-target="type-info-body">기록 종류 <span class="toggle-icon">▼</span></legend>
+                    <div id="type-info-body" class="section-toggle-body hidden">
                         <select id="type">
                             <option value="화물운송">화물운송</option>
                             <option value="수입">수입</option>
@@ -54,7 +54,7 @@
                     <div id="sms-parse-results" class="hidden" style="margin-top:10px; max-height:300px; overflow-y:auto; border-top:1px solid #eee; padding-top:10px; background:white;"></div>
                 </fieldset>
 
-                <!-- 상/하차 정보 -->
+                <!-- 상/하차 정보 (항상 노출) -->
                 <fieldset id="transport-details">
                     <legend>상/하차 정보</legend>
                     <div class="input-group">
@@ -100,9 +100,9 @@
                 </fieldset>
 
                 <!-- 3. 금액 정보 (아코디언) -->
-                <fieldset id="cost-info-fieldset" class="toggle-fieldset">
-                    <legend class="section-toggle-label">금액 정보 <span class="toggle-icon">▼</span></legend>
-                    <div class="section-toggle-body hidden">
+                <fieldset class="toggle-fieldset">
+                    <legend class="section-toggle-label" data-target="cost-info-body">금액 정보 <span class="toggle-icon">▼</span></legend>
+                    <div id="cost-info-body" class="section-toggle-body hidden">
                         <div id="cost-wrapper" class="hidden">
                             <input type="number" id="cost" step="0.01" placeholder="지출 금액 (만원)">
                         </div>
@@ -151,7 +151,7 @@
                         <input type="date" id="today-date-picker">
                         <button type="button" id="next-day-btn">→</button>
                     </div>
-                    <div id="today-summary" class="summary-card-container"></div>
+                    <div id="today-summary"></div>
                     <table id="today-records-table" class="responsive-table auto-layout">
                         <thead><tr><th>시작</th><th>종료</th><th>소요</th><th>상차</th><th>하차</th><th>비고</th><th>금액</th></tr></thead>
                         <tbody></tbody>
@@ -164,7 +164,7 @@
                         <select id="daily-month-select"></select>
                         <button type="button" id="next-daily-btn">→</button>
                     </div>
-                    <div id="daily-summary" class="summary-card-container"></div>
+                    <div id="daily-summary"></div>
                     <table id="daily-summary-table" class="yearly-summary-table">
                         <thead><tr><th>일</th><th>수입</th><th>지출</th><th>주유</th><th>정산</th><th>거리</th><th>건수</th><th>소요</th><th>관리</th></tr></thead><tbody></tbody>
                     </table>
@@ -176,7 +176,7 @@
                         <select id="weekly-month-select"></select>
                         <button type="button" id="next-weekly-btn">→</button>
                     </div>
-                    <div id="weekly-summary" class="summary-card-container"></div>
+                    <div id="weekly-summary"></div>
                     <table id="weekly-summary-table" class="yearly-summary-table">
                         <thead><tr><th>주차</th><th>기간</th><th>수입</th><th>지출</th><th>주유</th><th>정산</th><th>거리</th><th>소요</th></tr></thead><tbody></tbody>
                     </table>
@@ -187,7 +187,7 @@
                         <select id="monthly-year-select"></select>
                         <button type="button" id="next-monthly-btn">→</button>
                     </div>
-                    <div id="monthly-yearly-summary" class="summary-card-container"></div>
+                    <div id="monthly-yearly-summary"></div>
                     <table id="monthly-summary-table" class="yearly-summary-table">
                         <thead><tr><th>월</th><th>수입</th><th>지출</th><th>주유</th><th>정산</th><th>거리</th><th>소요</th></tr></thead><tbody></tbody>
                     </table>
